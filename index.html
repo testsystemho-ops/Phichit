@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0a0e1a">
+<title>Makro O2O Performance · Phichit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script type="module">
+  // ====== Firebase Realtime Database ======
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getDatabase, ref, set, remove, onValue, get, child }
+    from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBohmclWZ-vTpGeoTSFAx7x7an7AsAH2Ac",
+    authDomain: "st119-d22b9.firebaseapp.com",
+    databaseURL: "https://st119-d22b9-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "st119-d22b9",
+    storageBucket: "st119-d22b9.firebasestorage.app",
+    messagingSenderId: "30210542119",
+    appId: "1:30210542119:web:ec853b11cec6d0f21e9c02",
+    measurementId: "G-H2GG03JQ1G"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getDatabase(app);
+  const DATA_PATH = "o2o/Phichit";   // เก็บข้อมูลสาขา Phichit ใต้ path นี้
+
+  // expose ให้สคริปต์หลัก (classic) เรียกใช้ได้
+  window.FB = {
+    ready: true,
+    // เขียน/อัปเดต 1 record (key = วันที่ YYYY-MM-DD)
+    save: (rec) => set(ref(db, `${DATA_PATH}/${rec.date}`), rec),
+    // ลบ record ตามวันที่
+    remove: (date) => remove(ref(db, `${DATA_PATH}/${date}`)),
+    // subscribe การเปลี่ยนแปลงแบบ realtime
+    subscribe: (cb) => onValue(ref(db, DATA_PATH), (snap) => {
+      const val = snap.val() || {};
+      cb(Object.values(val));
+    }, (err) => { console.error("Firebase read error:", err); window.FB_ERROR = err; }),
+    // อ่านครั้งเดียว (ใช้ตอน seed ครั้งแรก)
+    once: () => get(ref(db, DATA_PATH)).then(s => s.val() || {})
+  };
+  // แจ้งสคริปต์หลักว่า Firebase พร้อมแล้ว
+  window.dispatchEvent(new Event("fb-ready"));
+</script>
+<style>
+:root{
+  --bg:#0a0e1a; --bg2:#0f1626; --card:#131c30; --card2:#18233c;
+  --line:#243a5e; --txt:#e8eefc; --mut:#7e8cb0;
+  --accent:#e2231a; --accent2:#ff5a2c; --accent-soft:#ff4d44;
+  --teal:#1fd4b4; --amber:#ffb020; --blue:#3b82f6; --violet:#8b5cf6; --green:#22c55e;
+  --grad: linear-gradient(135deg,var(--accent) 0%,var(--accent2) 100%);
+  --shadow: 0 18px 50px rgba(0,0,0,.55);
+  --glass: rgba(255,255,255,.04);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  font-family:'IBM Plex Sans Thai','Sora',sans-serif;
+  background:
+    radial-gradient(1200px 600px at 85% -10%, rgba(226,35,26,.18), transparent 60%),
+    radial-gradient(900px 500px at -10% 20%, rgba(59,130,246,.12), transparent 55%),
+    var(--bg);
+  background-attachment:fixed;
+  color:var(--txt); min-height:100vh; min-height:100dvh;
+  -webkit-font-smoothing:antialiased; transition:background .4s;
+}
+h1,h2,h3,.disp{font-family:'Sora',sans-serif}
+.mono{font-family:'JetBrains Mono',monospace}
+.hidden{display:none!important}
+
+/* ============ LOGIN ============ */
+#login{position:fixed;inset:0;display:grid;place-items:center;padding:20px;z-index:50;
+  background:
+    radial-gradient(900px 500px at 80% 10%, rgba(226,35,26,.22), transparent 60%),
+    radial-gradient(700px 500px at 10% 90%, rgba(59,130,246,.15), transparent 55%),
+    var(--bg);}
+.login-card{width:100%;max-width:400px;background:linear-gradient(180deg,var(--card),var(--bg2));
+  border:1px solid var(--line);border-radius:24px;padding:38px 30px;box-shadow:var(--shadow);
+  animation:rise .5s cubic-bezier(.2,.8,.2,1)}
+@keyframes rise{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+.login-logo{width:64px;height:64px;border-radius:18px;background:var(--grad);display:grid;place-items:center;
+  font-family:'Sora';font-weight:800;font-size:30px;color:#fff;margin:0 auto 20px;
+  box-shadow:0 14px 36px rgba(226,35,26,.5);letter-spacing:-1px}
+.login-card h2{text-align:center;font-size:22px;font-weight:800}
+.login-card .ls{text-align:center;color:var(--mut);font-size:13px;margin-top:6px;margin-bottom:26px}
+.lfield{margin-bottom:16px}
+.lfield label{font-size:12px;color:var(--mut);font-weight:600;display:block;margin-bottom:7px;letter-spacing:.5px}
+.lfield input{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--txt);
+  padding:13px 14px;border-radius:12px;font-size:15px;font-family:inherit;outline:none;transition:.15s}
+.lfield input:focus{border-color:var(--accent-soft);box-shadow:0 0 0 3px rgba(226,35,26,.18)}
+.login-err{color:var(--accent-soft);font-size:13px;text-align:center;margin-bottom:14px;min-height:18px;font-weight:600}
+.login-card .btn{width:100%;justify-content:center}
+
+/* ============ LAYOUT ============ */
+.app{max-width:1280px;margin:0 auto;padding:18px 16px 80px}
+header.top{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:20px}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.logo{width:48px;height:48px;border-radius:14px;background:var(--grad);display:grid;place-items:center;
+  font-family:'Sora';font-weight:800;font-size:22px;color:#fff;box-shadow:0 10px 30px rgba(226,35,26,.45);letter-spacing:-1px;flex-shrink:0}
+.brand h1{font-size:19px;font-weight:800;letter-spacing:-.5px;line-height:1.1}
+.brand p{color:var(--mut);font-size:12px;margin-top:2px}
+.head-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.user-chip{display:flex;align-items:center;gap:9px;background:var(--card);border:1px solid var(--line);
+  padding:7px 12px 7px 8px;border-radius:30px;font-size:13px}
+.user-chip .av{width:30px;height:30px;border-radius:50%;background:var(--grad);display:grid;place-items:center;
+  font-weight:700;font-size:13px;color:#fff;font-family:'Sora'}
+.user-chip .role{color:var(--mut);font-size:11px}
+.icon-btn{width:42px;height:42px;border-radius:12px;background:var(--card);border:1px solid var(--line);
+  color:var(--txt);font-size:18px;cursor:pointer;display:grid;place-items:center;transition:.18s}
+.icon-btn:hover{border-color:var(--accent-soft);transform:translateY(-2px)}
+
+.tabs{display:flex;gap:6px;background:var(--card);padding:6px;border-radius:14px;border:1px solid var(--line);flex-wrap:wrap}
+.tab{border:0;background:transparent;color:var(--mut);font-family:'Sora';font-weight:600;
+  padding:10px 16px;border-radius:10px;cursor:pointer;font-size:13.5px;transition:.2s;white-space:nowrap}
+.tab.active{background:var(--grad);color:#fff;box-shadow:0 6px 18px rgba(226,35,26,.4)}
+
+.strip{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;background:var(--card);
+  border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin-bottom:20px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:1px;font-weight:600}
+.field input,.field select{background:var(--bg2);border:1px solid var(--line);color:var(--txt);
+  padding:10px 12px;border-radius:10px;font-size:14px;font-family:inherit;min-width:140px;outline:none;transition:.15s}
+.field input:focus,.field select:focus{border-color:var(--accent-soft);box-shadow:0 0 0 3px rgba(226,35,26,.18)}
+.field .static{background:var(--bg2);border:1px solid var(--line);padding:10px 12px;border-radius:10px;
+  font-size:14px;font-weight:700;color:var(--accent-soft)}
+.flex1{flex:1;min-width:120px}
+
+.view{display:none;animation:fade .35s ease}
+.view.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ===== FORM ===== */
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px}
+.section{background:linear-gradient(180deg,var(--card) 0%,var(--bg2) 140%);border:1px solid var(--line);
+  border-radius:18px;padding:20px;position:relative;overflow:hidden}
+.section::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--secgrad,var(--grad))}
+.section h3{font-size:15px;display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--secc,var(--accent))}
+.inrow{display:flex;flex-direction:column;gap:5px;margin-bottom:13px}
+.inrow:last-child{margin-bottom:0}
+.inrow label{font-size:13px;color:var(--mut)}
+.inrow .unit{display:flex;align-items:center;gap:8px}
+.inrow input{flex:1;background:var(--bg);border:1px solid var(--line);color:var(--txt);
+  padding:11px 12px;border-radius:10px;font-size:15px;font-family:'JetBrains Mono';outline:none;transition:.15s}
+.inrow input:focus{border-color:var(--accent-soft);box-shadow:0 0 0 3px rgba(226,35,26,.15)}
+.suffix{color:var(--mut);font-size:13px;min-width:48px;font-weight:600}
+.save-bar{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;flex-wrap:wrap}
+.btn{border:0;font-family:'Sora';font-weight:700;font-size:14px;padding:13px 24px;border-radius:12px;
+  cursor:pointer;transition:.18s;display:inline-flex;align-items:center;gap:8px;justify-content:center}
+.btn-primary{background:var(--grad);color:#fff;box-shadow:0 10px 26px rgba(226,35,26,.4)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 14px 32px rgba(226,35,26,.5)}
+.btn-ghost{background:var(--card2);color:var(--txt);border:1px solid var(--line)}
+.btn-ghost:hover{border-color:var(--mut)}
+.btn-green{background:linear-gradient(135deg,#16a34a,#22c55e);color:#fff;box-shadow:0 10px 26px rgba(34,197,94,.35)}
+.btn-green:hover{transform:translateY(-2px)}
+
+/* ===== DASHBOARD ===== */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:16px}
+.kpi{background:linear-gradient(165deg,var(--card),var(--bg2));border:1px solid var(--line);
+  border-radius:18px;padding:18px;position:relative;overflow:hidden}
+.kpi .glow{position:absolute;width:120px;height:120px;border-radius:50%;filter:blur(40px);opacity:.4;top:-40px;right:-30px}
+.kpi .lab{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:1px;font-weight:600;display:flex;align-items:center;gap:8px}
+.kpi .val{font-family:'Sora';font-weight:800;font-size:28px;margin-top:8px;letter-spacing:-1px;line-height:1}
+.kpi .sub{font-size:12px;color:var(--mut);margin-top:7px}
+.ic{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:15px;background:var(--glass)}
+.grid2{display:grid;grid-template-columns:1.3fr .7fr;gap:16px;margin-bottom:16px}
+.grid2b{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.panel{background:linear-gradient(165deg,var(--card),var(--bg2));border:1px solid var(--line);border-radius:18px;padding:20px}
+.panel h3{font-size:15px;margin-bottom:4px}
+.panel .psub{font-size:12px;color:var(--mut);margin-bottom:18px}
+.chan{margin-bottom:16px}
+.chan .row{display:flex;justify-content:space-between;font-size:13px;margin-bottom:7px}
+.chan .row b{font-family:'JetBrains Mono';font-size:15px}
+.bar{height:12px;border-radius:8px;background:var(--bg);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:8px;transition:width .9s cubic-bezier(.2,.8,.2,1)}
+.rings{display:flex;justify-content:space-around;flex-wrap:wrap;gap:14px}
+.ring{display:flex;flex-direction:column;align-items:center;gap:10px}
+.ring .rl{font-size:12px;color:var(--mut);font-weight:600;letter-spacing:.5px}
+.chart-wrap{position:relative;height:240px}
+svg.trend{width:100%;height:100%;overflow:visible}
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:560px}
+th,td{padding:12px 14px;text-align:right;white-space:nowrap}
+th{color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.8px;border-bottom:1px solid var(--line);font-weight:700}
+th:first-child,td:first-child{text-align:left}
+tbody tr{border-bottom:1px solid rgba(127,140,176,.18)}
+tbody tr:hover{background:rgba(226,35,26,.06)}
+td.mono{font-family:'JetBrains Mono'}
+.del{color:var(--accent-soft);cursor:pointer;background:none;border:0;font-size:16px;opacity:.6}
+.del:hover{opacity:1}
+.badge{padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;font-family:'JetBrains Mono'}
+.empty{text-align:center;padding:50px 20px;color:var(--mut)}
+.empty .big{font-size:42px;margin-bottom:10px}
+
+/* filter row */
+.filterbar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:18px;
+  background:var(--card2);border:1px dashed var(--line);border-radius:14px;padding:14px}
+.filterbar .field input,.filterbar .field select{min-width:130px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.chip{padding:7px 14px;border-radius:24px;background:var(--card);border:1px solid var(--line);
+  color:var(--mut);font-size:13px;font-weight:600;cursor:pointer;transition:.15s;font-family:'Sora'}
+.chip.active{background:var(--grad);color:#fff;border-color:transparent}
+
+/* ===== SETTINGS DRAWER ===== */
+.drawer-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);z-index:60;opacity:0;
+  pointer-events:none;transition:.3s}
+.drawer-bg.open{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:340px;max-width:90vw;background:linear-gradient(180deg,var(--card),var(--bg2));
+  border-left:1px solid var(--line);z-index:61;transform:translateX(110%);transition:.35s cubic-bezier(.2,.8,.2,1);
+  padding:24px;overflow-y:auto;box-shadow:var(--shadow)}
+.drawer.open{transform:none}
+.drawer h2{font-size:18px;display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.drawer .dsub{color:var(--mut);font-size:12.5px;margin-bottom:22px}
+.set-group{margin-bottom:26px}
+.set-group h4{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;font-weight:700}
+.theme-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.theme-card{border:2px solid var(--line);border-radius:14px;padding:12px;cursor:pointer;transition:.15s;background:var(--bg)}
+.theme-card.active{border-color:var(--accent-soft);box-shadow:0 0 0 3px rgba(226,35,26,.2)}
+.theme-card .sw{display:flex;gap:5px;margin-bottom:9px}
+.theme-card .sw span{width:22px;height:22px;border-radius:6px}
+.theme-card .tn{font-size:13px;font-weight:700;font-family:'Sora'}
+.theme-card .td{font-size:11px;color:var(--mut)}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid rgba(127,140,176,.15)}
+.toggle-row span{font-size:14px}
+.sw-toggle{width:46px;height:26px;border-radius:30px;background:var(--line);position:relative;cursor:pointer;transition:.2s;flex-shrink:0}
+.sw-toggle::after{content:'';position:absolute;width:20px;height:20px;border-radius:50%;background:#fff;top:3px;left:3px;transition:.2s}
+.sw-toggle.on{background:var(--grad)}
+.sw-toggle.on::after{left:23px}
+.accent-row{display:flex;gap:10px;flex-wrap:wrap}
+.accent-dot{width:34px;height:34px;border-radius:10px;cursor:pointer;border:2px solid transparent;transition:.15s}
+.accent-dot.active{border-color:#fff;transform:scale(1.1)}
+
+.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(120px);
+  background:var(--grad);color:#fff;padding:14px 24px;border-radius:14px;font-weight:700;font-family:'Sora';
+  box-shadow:var(--shadow);transition:.4s cubic-bezier(.2,.8,.2,1);z-index:99;font-size:14px;max-width:90vw;text-align:center}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+@media(max-width:860px){
+  .grid2,.grid2b{grid-template-columns:1fr}
+  .brand h1{font-size:16px}
+  .brand p{font-size:11px}
+  .kpi .val{font-size:24px}
+  .user-chip .un,.user-chip .role{display:none}
+  .user-chip{padding:6px}
+}
+@media(max-width:560px){
+  .app{padding:14px 12px 80px}
+  .tabs{width:100%}
+  .tab{flex:1}
+  .theme-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div id="login">
+  <div class="login-card">
+    <div class="login-logo">M</div>
+    <h2>Makro O2O Performance</h2>
+    <p class="ls">เข้าสู่ระบบเพื่อจัดการข้อมูลสาขา Phichit</p>
+    <div class="login-err" id="loginErr"></div>
+    <div class="lfield"><label>ชื่อผู้ใช้ (Username)</label>
+      <input id="loginUser" autocomplete="username" placeholder="username" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <div class="lfield"><label>รหัสผ่าน (Password)</label>
+      <input id="loginPass" type="password" autocomplete="current-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <button class="btn btn-primary" onclick="doLogin()">เข้าสู่ระบบ</button>
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<div class="app hidden" id="appRoot">
+  <header class="top">
+    <div class="brand">
+      <div class="logo">M</div>
+      <div>
+        <h1>O2O Performance</h1>
+        <p>Store Phichit · ระบบบันทึก & แดชบอร์ด</p>
+      </div>
+    </div>
+    <div class="head-right">
+      <div class="user-chip">
+        <div class="av" id="uAvatar">A</div>
+        <div><div class="un" id="uName" style="font-weight:600">admin</div><div class="role" id="uRole">Administrator</div></div>
+      </div>
+      <button class="icon-btn" title="ตั้งค่า" onclick="openDrawer()">⚙️</button>
+      <button class="icon-btn" title="ออกจากระบบ" onclick="doLogout()">⏻</button>
+    </div>
+  </header>
+
+  <div class="tabs" style="margin-bottom:20px">
+    <button class="tab active" data-view="dash" onclick="switchView('dash',this)">📊 Dashboard</button>
+    <button class="tab" data-view="month" onclick="switchView('month',this)">📅 สรุปสิ้นเดือน</button>
+    <button class="tab" data-view="entry" id="tabEntry" onclick="switchView('entry',this)">✍️ บันทึกข้อมูล</button>
+  </div>
+
+  <!-- ===== DASHBOARD ===== -->
+  <section id="view-dash" class="view active">
+    <div class="filterbar">
+      <div class="field">
+        <label>สาขา</label>
+        <div class="static">📍 Phichit</div>
+      </div>
+      <div class="field"><label>จากวันที่</label><input type="date" id="filtFrom" onchange="render()"></div>
+      <div class="field"><label>ถึงวันที่</label><input type="date" id="filtTo" onchange="render()"></div>
+      <div class="field flex1">
+        <label>ช่วงด่วน</label>
+        <div class="chips" style="margin:0">
+          <span class="chip active" onclick="quickRange('mtd',this)">MTD</span>
+          <span class="chip" onclick="quickRange('7',this)">7 วัน</span>
+          <span class="chip" onclick="quickRange('30',this)">30 วัน</span>
+          <span class="chip" onclick="quickRange('all',this)">ทั้งหมด</span>
+        </div>
+      </div>
+    </div>
+    <div class="kpis" id="kpiRow"></div>
+    <div class="grid2">
+      <div class="panel">
+        <h3>แนวโน้มยอดขายรายวัน</h3>
+        <p class="psub" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:18px;height:3px;border-radius:2px;background:var(--accent);display:inline-block"></span> ยอดขาย (MB)</span>
+          <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:var(--barcol,#3b82f6);display:inline-block;opacity:.55"></span> จำนวน Order</span>
+        </p>
+        <div class="chart-wrap"><svg class="trend" id="trendChart" viewBox="0 0 720 240" preserveAspectRatio="none"></svg></div>
+      </div>
+      <div class="panel">
+        <h3>ช่องทางการขาย</h3>
+        <p class="psub">สัดส่วนยอดขาย Makro Pro vs B2B</p>
+        <div id="channels"></div>
+      </div>
+    </div>
+    <div class="grid2b">
+      <div class="panel">
+        <h3>คุณภาพการจัดส่ง · OTIF</h3>
+        <p class="psub">On-Time · In-Full · OTIF (ค่าเฉลี่ย)</p>
+        <div class="rings" id="rings"></div>
+      </div>
+      <div class="panel">
+        <h3>ตะกร้า & การยกเลิก</h3>
+        <p class="psub">Basket Size & Cancelled Orders</p>
+        <div id="basketBox"></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h3 style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+        <span>บันทึกรายวัน</span>
+        <button class="btn btn-green" style="padding:9px 16px;font-size:13px" onclick="exportExcel()">📥 Export Excel</button>
+      </h3>
+      <p class="psub">รายการตามช่วงวันที่ที่กรอง</p>
+      <div class="tbl-wrap"><table id="recTable"></table></div>
+    </div>
+  </section>
+
+  <!-- ===== ENTRY ===== -->
+  <section id="view-entry" class="view">
+    <div class="strip">
+      <div class="field"><label>วันที่บันทึก</label><input type="date" id="recDate"></div>
+      <div class="field"><label>สาขา</label><div class="static">📍 Phichit</div></div>
+      <div class="field flex1"></div>
+    </div>
+    <div class="form-grid">
+      <div class="section" style="--secgrad:linear-gradient(135deg,#e2231a,#ff5a2c);--secc:#ff4d44">
+        <h3><span class="dot"></span> ยอดขาย & คำสั่งซื้อ</h3>
+        <div class="inrow"><label>ยอดขายรวม (Total Sales)</label><div class="unit"><input id="f_sales" type="number" step="0.01" placeholder="1.03" oninput="calcBasket()"><span class="suffix">MB.</span></div></div>
+        <div class="inrow"><label>จำนวน Order</label><div class="unit"><input id="f_orders" type="number" placeholder="219" oninput="calcBasket()"><span class="suffix">order</span></div></div>
+        <div class="inrow"><label>Basket Size <span style="color:var(--teal);font-size:11px">· คำนวณอัตโนมัติ</span></label>
+          <div class="unit"><input id="f_basket" type="number" placeholder="0" readonly style="background:var(--bg2);color:var(--teal);cursor:not-allowed"><span class="suffix">บาท</span></div></div>
+        <p style="font-size:11.5px;color:var(--mut);margin-top:4px">Basket = ยอดขายรวม ÷ จำนวน Order</p>
+      </div>
+      <div class="section" style="--secgrad:linear-gradient(135deg,#3b82f6,#8b5cf6);--secc:#3b82f6">
+        <h3><span class="dot"></span> ช่องทางการขาย</h3>
+        <div class="inrow"><label>Makro Pro</label><div class="unit"><input id="f_pro" type="number" step="0.01" placeholder="0.34"><span class="suffix">MB.</span></div></div>
+        <div class="inrow"><label>B2B</label><div class="unit"><input id="f_b2b" type="number" step="0.01" placeholder="0.69"><span class="suffix">MB.</span></div></div>
+        <p style="font-size:11.5px;color:var(--mut);margin-top:4px">% คำนวณอัตโนมัติจากยอดแต่ละช่องทาง</p>
+      </div>
+      <div class="section" style="--secgrad:linear-gradient(135deg,#1fd4b4,#22c55e);--secc:#1fd4b4">
+        <h3><span class="dot"></span> คุณภาพการจัดส่ง</h3>
+        <div class="inrow"><label>On-Time (ส่งตรงเวลา)</label><div class="unit"><input id="f_ontime" type="number" step="0.01" placeholder="97.84"><span class="suffix">%</span></div></div>
+        <div class="inrow"><label>In-Full (ส่งครบ)</label><div class="unit"><input id="f_infull" type="number" step="0.01" placeholder="94.16"><span class="suffix">%</span></div></div>
+        <div class="inrow"><label>OTIF</label><div class="unit"><input id="f_otif" type="number" step="0.01" placeholder="92.26"><span class="suffix">%</span></div></div>
+      </div>
+      <div class="section" style="--secgrad:linear-gradient(135deg,#ffb020,#e2231a);--secc:#ffb020">
+        <h3><span class="dot"></span> การยกเลิก</h3>
+        <div class="inrow"><label>Order ที่ยกเลิก (Cancelled)</label><div class="unit"><input id="f_cancel" type="number" placeholder="14"><span class="suffix">order</span></div></div>
+        <p style="font-size:11.5px;color:var(--mut);margin-top:4px">% ยกเลิก = Cancelled ÷ จำนวน Order</p>
+      </div>
+    </div>
+    <div class="save-bar">
+      <button class="btn btn-ghost" onclick="loadSeed()">โหลดตัวอย่าง</button>
+      <button class="btn btn-ghost" onclick="clearForm()">ล้างฟอร์ม</button>
+      <button class="btn btn-green" onclick="exportExcel()">📥 Export Excel</button>
+      <button class="btn btn-primary" onclick="saveRecord()">💾 บันทึกข้อมูล</button>
+    </div>
+  </section>
+
+  <!-- ===== MONTHLY SUMMARY ===== -->
+  <section id="view-month" class="view">
+    <div class="filterbar">
+      <div class="field"><label>สาขา</label><div class="static">📍 Phichit</div></div>
+      <div class="field"><label>เลือกเดือน</label><input type="month" id="monthPick" onchange="renderMonth()"></div>
+      <div class="field flex1" style="align-items:flex-end;display:flex;justify-content:flex-end">
+        <button class="btn btn-green" style="padding:11px 18px;font-size:13px" onclick="exportMonthExcel()">📥 Export สรุปเดือน</button>
+      </div>
+    </div>
+    <div id="monthHead" style="margin-bottom:18px"></div>
+    <div class="kpis" id="monthKpi"></div>
+    <div class="grid2b">
+      <div class="panel">
+        <h3>สัดส่วนช่องทางการขาย</h3>
+        <p class="psub">Walk-in · Makro Pro · B2B</p>
+        <div id="monthChan"></div>
+      </div>
+      <div class="panel">
+        <h3>หมวดสินค้า (Product Mix)</h3>
+        <p class="psub">Fresh Food · Dry Food · Non Food</p>
+        <div id="monthProd"></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>คุณภาพการจัดส่งเฉลี่ยทั้งเดือน</h3>
+      <p class="psub">On-Time · In-Full · OTIF</p>
+      <div class="rings" id="monthRings"></div>
+    </div>
+  </section>
+</div>
+
+<!-- ============ SETTINGS DRAWER ============ -->
+<div class="drawer-bg" id="drawerBg" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <h2>ตั้งค่า <span class="icon-btn" style="width:34px;height:34px;font-size:15px" onclick="closeDrawer()">✕</span></h2>
+  <p class="dsub">ปรับแต่งธีมและรูปแบบการแสดงผล</p>
+  <div class="set-group">
+    <h4>🎨 ธีมสี (Theme)</h4>
+    <div class="theme-grid" id="themeGrid"></div>
+  </div>
+  <div class="set-group">
+    <h4>✨ สีเน้น (Accent)</h4>
+    <div class="accent-row" id="accentRow"></div>
+  </div>
+  <div class="set-group">
+    <h4>⚙️ การแสดงผล</h4>
+    <div class="toggle-row"><span>ภาพเคลื่อนไหว (Animations)</span><div class="sw-toggle on" id="tgAnim" onclick="toggleAnim(this)"></div></div>
+    <div class="toggle-row"><span>มุมโค้งมน (Rounded)</span><div class="sw-toggle on" id="tgRound" onclick="toggleRound(this)"></div></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ AUTH (user/pass hidden from UI) ============ */
+const USERS={
+  admin:{p:'makro@2026', role:'Administrator', name:'admin', canEdit:true},
+  viewer:{p:'view@2026', role:'Viewer', name:'viewer', canEdit:false}
+};
+let currentUser=null;
+
+function doLogin(){
+  const u=document.getElementById('loginUser').value.trim();
+  const p=document.getElementById('loginPass').value;
+  const acc=USERS[u.toLowerCase()];
+  if(acc && acc.p===p){
+    currentUser=acc;
+    document.getElementById('login').classList.add('hidden');
+    document.getElementById('appRoot').classList.remove('hidden');
+    document.getElementById('uName').textContent=acc.name;
+    document.getElementById('uRole').textContent=acc.role;
+    document.getElementById('uAvatar').textContent=acc.name.charAt(0).toUpperCase();
+    // viewer cannot edit -> hide entry tab
+    document.getElementById('tabEntry').style.display=acc.canEdit?'':'none';
+    render();
+  }else{
+    document.getElementById('loginErr').textContent='❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง';
+    document.getElementById('loginPass').value='';
+  }
+}
+function doLogout(){
+  currentUser=null;
+  document.getElementById('appRoot').classList.add('hidden');
+  document.getElementById('login').classList.remove('hidden');
+  document.getElementById('loginUser').value='';
+  document.getElementById('loginPass').value='';
+  document.getElementById('loginErr').textContent='';
+}
+
+/* ============ THEMES (>5) ============ */
+const THEMES={
+  midnight:{n:'Midnight',d:'น้ำเงินเข้ม',vars:{'--bg':'#0a0e1a','--bg2':'#0f1626','--card':'#131c30','--card2':'#18233c','--line':'#243a5e','--txt':'#e8eefc','--mut':'#7e8cb0'},sw:['#0a0e1a','#131c30','#e2231a']},
+  obsidian:{n:'Obsidian',d:'ดำสนิท',vars:{'--bg':'#08080a','--bg2':'#101014','--card':'#16161c','--card2':'#1e1e26','--line':'#2c2c38','--txt':'#f0f0f5','--mut':'#8a8a98'},sw:['#08080a','#16161c','#e2231a']},
+  arctic:{n:'Arctic',d:'สว่าง โมเดิร์น',vars:{'--bg':'#eef2f9','--bg2':'#ffffff','--card':'#ffffff','--card2':'#f3f6fc','--line':'#d8e0ee','--txt':'#16203a','--mut':'#6a7894'},sw:['#eef2f9','#ffffff','#e2231a']},
+  forest:{n:'Forest',d:'เขียวธรรมชาติ',vars:{'--bg':'#08160f','--bg2':'#0d1f16','--card':'#11281c','--card2':'#163524','--line':'#1f4a32','--txt':'#e6f5ec','--mut':'#7da690'},sw:['#08160f','#11281c','#22c55e']},
+  royal:{n:'Royal',d:'ม่วงหรูหรา',vars:{'--bg':'#0f0a1e','--bg2':'#171029','--card':'#1d1535','--card2':'#261a45','--line':'#3a2a66','--txt':'#efe9fc','--mut':'#9d8cc4'},sw:['#0f0a1e','#1d1535','#8b5cf6']},
+  sunset:{n:'Sunset',d:'อบอุ่น พระอาทิตย์',vars:{'--bg':'#1a0d0a','--bg2':'#241310','--card':'#2e1814','--card2':'#3a201a','--line':'#5e3528','--txt':'#fceee8','--mut':'#c49d8c'},sw:['#1a0d0a','#2e1814','#ff5a2c']},
+  ocean:{n:'Ocean',d:'ฟ้าเทอร์ควอยซ์',vars:{'--bg':'#04161c','--bg2':'#072027','--card':'#0a2c35','--card2':'#0e3a45','--line':'#15535e','--txt':'#e4f7fb','--mut':'#7cb0bd'},sw:['#04161c','#0a2c35','#1fd4b4']},
+  slate:{n:'Slate',d:'เทาเรียบหรู',vars:{'--bg':'#121417','--bg2':'#1a1d22','--card':'#21252b','--card2':'#2a2f37','--line':'#3a4049','--txt':'#eceef2','--mut':'#8b929e'},sw:['#121417','#21252b','#3b82f6']}
+};
+const ACCENTS=[
+  {n:'Makro Red',a:'#e2231a',a2:'#ff5a2c',s:'#ff4d44'},
+  {n:'Ocean',a:'#0ea5e9',a2:'#22d3ee',s:'#38bdf8'},
+  {n:'Emerald',a:'#10b981',a2:'#34d399',s:'#34d399'},
+  {n:'Violet',a:'#8b5cf6',a2:'#c084fc',s:'#a78bfa'},
+  {n:'Amber',a:'#f59e0b',a2:'#fbbf24',s:'#fbbf24'},
+  {n:'Rose',a:'#f43f5e',a2:'#fb7185',s:'#fb7185'},
+];
+let curTheme='midnight', curAccent=0;
+
+function applyTheme(name){
+  curTheme=name;const t=THEMES[name];const root=document.documentElement;
+  Object.entries(t.vars).forEach(([k,v])=>root.style.setProperty(k,v));
+  document.querySelectorAll('.theme-card').forEach(c=>c.classList.toggle('active',c.dataset.t===name));
+  render();
+}
+function applyAccent(i){
+  curAccent=i;const a=ACCENTS[i];const root=document.documentElement;
+  root.style.setProperty('--accent',a.a);root.style.setProperty('--accent2',a.a2);root.style.setProperty('--accent-soft',a.s);
+  root.style.setProperty('--grad',`linear-gradient(135deg,${a.a} 0%,${a.a2} 100%)`);
+  document.querySelectorAll('.accent-dot').forEach((d,j)=>d.classList.toggle('active',j===i));
+  render();
+}
+function buildSettings(){
+  document.getElementById('themeGrid').innerHTML=Object.entries(THEMES).map(([k,t])=>`
+    <div class="theme-card ${k===curTheme?'active':''}" data-t="${k}" onclick="applyTheme('${k}')">
+      <div class="sw">${t.sw.map(c=>`<span style="background:${c}"></span>`).join('')}</div>
+      <div class="tn">${t.n}</div><div class="td">${t.d}</div></div>`).join('');
+  document.getElementById('accentRow').innerHTML=ACCENTS.map((a,i)=>`
+    <div class="accent-dot ${i===curAccent?'active':''}" style="background:linear-gradient(135deg,${a.a},${a.a2})" title="${a.n}" onclick="applyAccent(${i})"></div>`).join('');
+}
+function toggleAnim(el){el.classList.toggle('on');document.body.style.setProperty('--anim',el.classList.contains('on')?'':'none');
+  document.querySelectorAll('*').forEach(()=>{});if(!el.classList.contains('on')){document.body.style.transition='none';}else{document.body.style.transition='background .4s';}}
+function toggleRound(el){el.classList.toggle('on');const r=el.classList.contains('on');
+  document.querySelectorAll('.panel,.kpi,.section,.card,.login-card').forEach(c=>c.style.borderRadius=r?'':'6px');}
+function openDrawer(){document.getElementById('drawer').classList.add('open');document.getElementById('drawerBg').classList.add('open')}
+function closeDrawer(){document.getElementById('drawer').classList.remove('open');document.getElementById('drawerBg').classList.remove('open')}
+
+/* ============ DATA ============ */
+let records=[];
+function todayStr(){return new Date().toISOString().slice(0,10)}
+document.getElementById('recDate').value=todayStr();
+
+function switchView(v,btn){
+  if(v==='entry' && (!currentUser||!currentUser.canEdit)){toast('⛔ บัญชีนี้ดูได้อย่างเดียว');return;}
+  document.querySelectorAll('.view').forEach(e=>e.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  if(v==='dash')render();
+  if(v==='month')renderMonth();
+}
+function val(id){const v=parseFloat(document.getElementById(id).value);return isNaN(v)?0:v}
+function calcBasket(){const s=val('f_sales'),o=val('f_orders');document.getElementById('f_basket').value=o>0?Math.round(s*1e6/o):0}
+function clearForm(){['f_sales','f_orders','f_basket','f_pro','f_b2b','f_ontime','f_infull','f_otif','f_cancel'].forEach(i=>document.getElementById(i).value='')}
+function loadSeed(){const v={f_sales:1.03,f_orders:219,f_pro:0.34,f_b2b:0.69,f_ontime:97.84,f_infull:94.16,f_otif:92.26,f_cancel:14};
+  Object.entries(v).forEach(([k,x])=>document.getElementById(k).value=x);calcBasket()}
+function saveRecord(){
+  if(!currentUser.canEdit){toast('⛔ ไม่มีสิทธิ์บันทึก');return}
+  const sales=val('f_sales');
+  if(sales<=0 && val('f_orders')<=0){toast('⚠️ กรุณากรอกยอดขายหรือจำนวน Order');return}
+  const orders=val('f_orders');
+  const basket=orders>0?Math.round(sales*1e6/orders):0;
+  const r={date:document.getElementById('recDate').value,store:'Phichit',sales,orders,basket,
+    walkin:0,pro:val('f_pro'),b2b:val('f_b2b'),fresh:0,dry:0,nonfood:0,
+    ontime:val('f_ontime'),infull:val('f_infull'),otif:val('f_otif'),cancel:val('f_cancel')};
+  const exists=records.some(x=>x.date===r.date);
+  if(window.FB && window.FB.ready && !window.FB_ERROR){
+    window.FB.save(r)
+      .then(()=>toast(exists?'✅ อัปเดต '+fmtDateTH(r.date):'✅ บันทึก '+fmtDateTH(r.date)))
+      .catch(e=>{console.error(e);toast('⚠️ บันทึกออนไลน์ไม่สำเร็จ (เก็บในเครื่องแทน)');saveLocal(r);});
+  }else{
+    saveLocal(r);
+    toast(exists?'✅ อัปเดต '+fmtDateTH(r.date):'✅ บันทึก '+fmtDateTH(r.date));
+  }
+  clearForm();
+  document.querySelector('.tab[data-view="dash"]').click();
+}
+function saveLocal(r){
+  const idx=records.findIndex(x=>x.date===r.date);
+  if(idx>=0)records[idx]=r;else records.push(r);
+  records.sort((a,b)=>a.date.localeCompare(b.date));
+  render();
+}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2600)}
+function fmt(n,d=2){return n.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d})}
+function fmtDateTH(iso){if(!iso)return'';const[y,m,d]=iso.split('-');return`${d}-${m}-${y}`}
+function fmtDateShortTH(iso){if(!iso)return'';const[,m,d]=iso.split('-');return`${d}-${m}`}
+
+function quickRange(r,el){
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');
+  const to=todayStr();let from='';
+  if(r==='mtd'){from=to.slice(0,7)+'-01'}
+  else if(r==='7'){const d=new Date();d.setDate(d.getDate()-6);from=d.toISOString().slice(0,10)}
+  else if(r==='30'){const d=new Date();d.setDate(d.getDate()-29);from=d.toISOString().slice(0,10)}
+  else{from=''}
+  document.getElementById('filtFrom').value=r==='all'?'':from;
+  document.getElementById('filtTo').value=r==='all'?'':to;
+  render();
+}
+function getData(){
+  let data=records.filter(r=>r.store==='Phichit');
+  const f=document.getElementById('filtFrom').value,t=document.getElementById('filtTo').value;
+  if(f)data=data.filter(r=>r.date>=f);
+  if(t)data=data.filter(r=>r.date<=t);
+  return data;
+}
+
+function render(){
+  const data=getData();
+  if(!data.length){
+    ['kpiRow','channels','rings','basketBox'].forEach(i=>document.getElementById(i).innerHTML='');
+    document.getElementById('trendChart').innerHTML='';
+    document.getElementById('recTable').innerHTML='<tr><td colspan="8"><div class="empty"><div class="big">📭</div>ไม่มีข้อมูลในช่วงที่เลือก<br>ปรับตัวกรองหรือเพิ่มข้อมูลในแท็บบันทึก</div></td></tr>';
+    return;
+  }
+  const n=data.length;
+  // จำนวนวันที่ใช้หาร = วันที่ล่าสุดที่บันทึก - 1 (วันที่ย้อนหลังของเดือนนั้น)
+  // เช่น บันทึกล่าสุดวันที่ 7 → หาร 6 วัน, วันที่ 15 → หาร 14 วัน
+  const lastDay=parseInt(data[data.length-1].date.split('-')[2],10);
+  const elapsedDays=Math.max(lastDay-1,1);
+  const totSales=data.reduce((s,r)=>s+r.sales,0),totOrders=data.reduce((s,r)=>s+r.orders,0);
+  const totPro=data.reduce((s,r)=>s+r.pro,0),totB2B=data.reduce((s,r)=>s+r.b2b,0);
+  const totCancel=data.reduce((s,r)=>s+r.cancel,0);
+  const avgDay=totSales/elapsedDays, avgOrderPerDay=totOrders/elapsedDays;
+  const avgBasket=data.reduce((s,r)=>s+r.basket,0)/n;
+  const avgOntime=data.reduce((s,r)=>s+r.ontime,0)/n,avgInfull=data.reduce((s,r)=>s+r.infull,0)/n,avgOtif=data.reduce((s,r)=>s+r.otif,0)/n;
+  const cancelPct=totOrders>0?totCancel/totOrders*100:0;
+  const kpis=[
+    {l:'Total Sales',v:fmt(totSales)+' <span style="font-size:15px;color:var(--mut)">MB</span>',s:n+' วันที่บันทึก',ic:'💰',c:'var(--accent)'},
+    {l:'AVG / Day',v:fmt(avgDay)+' <span style="font-size:15px;color:var(--mut)">MB</span>',s:'หาร '+elapsedDays+' วัน',ic:'📈',c:'var(--teal)'},
+    {l:'Total Orders',v:totOrders.toLocaleString(),s:'~'+Math.round(totOrders/n)+' order/วัน',ic:'🛒',c:'var(--blue)'},
+    {l:'AVG / Order',v:fmt(avgOrderPerDay,0)+' <span style="font-size:15px;color:var(--mut)">order</span>',s:'หาร '+elapsedDays+' วัน',ic:'🎯',c:'var(--violet)'},
+    {l:'Basket Size',v:'฿'+fmt(avgBasket,0),s:'ขนาดตะกร้าเฉลี่ย',ic:'🧺',c:'var(--amber)'},
+    {l:'Cancelled',v:totCancel+' <span style="font-size:15px;color:var(--mut)">order</span>',s:fmt(cancelPct)+'% ของทั้งหมด',ic:'⛔',c:'var(--accent-soft)'},
+  ];
+  document.getElementById('kpiRow').innerHTML=kpis.map(k=>`<div class="kpi"><div class="glow" style="background:${k.c}"></div>
+    <div class="lab"><span class="ic">${k.ic}</span>${k.l}</div><div class="val">${k.v}</div><div class="sub">${k.s}</div></div>`).join('');
+  const chTot=totPro+totB2B||1;
+  const chans=[{n:'Makro Pro',v:totPro,p:totPro/chTot*100,c:'linear-gradient(90deg,#3b82f6,#8b5cf6)'},
+    {n:'B2B',v:totB2B,p:totB2B/chTot*100,c:'linear-gradient(90deg,#1fd4b4,#22c55e)'}];
+  document.getElementById('channels').innerHTML=chans.map(c=>`<div class="chan"><div class="row"><span>${c.n}</span><b>${fmt(c.v)} MB · ${fmt(c.p,1)}%</b></div>
+    <div class="bar"><i style="width:${c.p}%;background:${c.c}"></i></div></div>`).join('')+
+    `<div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--line);font-size:13px;color:var(--mut)">ยอดรวมทุกช่องทาง <b style="color:var(--txt);font-family:'JetBrains Mono'">${fmt(chTot)} MB</b></div>`;
+  const ringData=[{l:'On-Time',v:avgOntime,c:'#1fd4b4'},{l:'In-Full',v:avgInfull,c:'#3b82f6'},{l:'OTIF',v:avgOtif,c:'var(--accent)'}];
+  document.getElementById('rings').innerHTML=ringData.map(r=>{const R=42,C=2*Math.PI*R,off=C*(1-r.v/100);
+    return `<div class="ring"><svg width="110" height="110" viewBox="0 0 110 110" style="transform:rotate(-90deg)">
+      <circle cx="55" cy="55" r="${R}" fill="none" stroke="rgba(127,140,176,.18)" stroke-width="10"/>
+      <circle cx="55" cy="55" r="${R}" fill="none" stroke="${r.c}" stroke-width="10" stroke-linecap="round"
+        stroke-dasharray="${C}" stroke-dashoffset="${C}" style="transition:stroke-dashoffset 1.1s cubic-bezier(.2,.8,.2,1)" data-off="${off}"/>
+      <text x="55" y="60" text-anchor="middle" transform="rotate(90 55 55)" fill="var(--txt)" font-size="17" font-weight="800" font-family="Sora">${fmt(r.v,1)}%</text>
+      </svg><span class="rl">${r.l}</span></div>`}).join('');
+  setTimeout(()=>document.querySelectorAll('.ring circle[data-off]').forEach(c=>c.setAttribute('stroke-dashoffset',c.dataset.off)),60);
+  document.getElementById('basketBox').innerHTML=`<div style="display:flex;gap:14px;flex-wrap:wrap">
+      <div style="flex:1;min-width:140px;background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:18px">
+        <div style="font-size:12px;color:var(--mut);letter-spacing:1px">AVG BASKET</div>
+        <div style="font-family:'Sora';font-weight:800;font-size:28px;margin-top:6px">฿${fmt(avgBasket,0)}</div>
+        <div style="font-size:12px;color:var(--teal);margin-top:6px">ขนาดตะกร้าเฉลี่ย</div></div>
+      <div style="flex:1;min-width:140px;background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:18px">
+        <div style="font-size:12px;color:var(--mut);letter-spacing:1px">CANCEL RATE</div>
+        <div style="font-family:'Sora';font-weight:800;font-size:28px;margin-top:6px;color:${cancelPct>3?'var(--accent-soft)':'var(--green)'}">${fmt(cancelPct,2)}%</div>
+        <div style="font-size:12px;color:var(--mut);margin-top:6px">${totCancel} จาก ${totOrders.toLocaleString()} order</div></div></div>
+    <div class="bar" style="margin-top:16px"><i style="width:${Math.min(cancelPct*5,100)}%;background:linear-gradient(90deg,#ffb020,#e2231a)"></i></div>
+    <div style="font-size:11.5px;color:var(--mut);margin-top:8px">เป้าหมาย Cancel Rate ≤ 3.00%</div>`;
+  drawTrend(data);drawTable(data);
+}
+function drawTrend(data){
+  const svg=document.getElementById('trendChart'),W=720,H=240,pad=30,n=data.length;
+  const maxS=Math.max(...data.map(r=>r.sales),0.1),maxO=Math.max(...data.map(r=>r.orders),1);
+  const x=i=>n===1?W/2:pad+i*(W-2*pad)/(n-1),yS=v=>H-pad-(v/maxS)*(H-2*pad);
+  let bars='',line='',pts='';const bw=Math.min((W-2*pad)/Math.max(n,1)*0.5,30);
+  data.forEach((r,i)=>{const bh=(r.orders/maxO)*(H-2*pad);
+    bars+=`<rect x="${x(i)-bw/2}" y="${H-pad-bh}" width="${bw}" height="${bh}" rx="4" fill="rgba(59,130,246,.35)"/>`;
+    const px=x(i),py=yS(r.sales);line+=(i===0?'M':'L')+px+' '+py+' ';
+    pts+=`<circle cx="${px}" cy="${py}" r="4.5" fill="var(--accent)" stroke="#fff" stroke-width="1.5"/>`});
+  const area=line+`L${x(n-1)} ${H-pad} L${x(0)} ${H-pad} Z`;
+  svg.innerHTML=`<defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="var(--accent)" stop-opacity="0.32"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>
+    ${[0,.5,1].map(t=>`<line x1="${pad}" y1="${pad+t*(H-2*pad)}" x2="${W-pad}" y2="${pad+t*(H-2*pad)}" stroke="rgba(127,140,176,.15)"/>`).join('')}
+    ${bars}<path d="${area}" fill="url(#ag)"/>
+    <path d="${line}" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${pts}
+    ${data.map((r,i)=>`<text x="${x(i)}" y="${H-8}" text-anchor="middle" fill="var(--mut)" font-size="10" font-family="JetBrains Mono">${fmtDateShortTH(r.date)}</text>`).join('')}`;
+}
+function drawTable(data){
+  const canEdit=currentUser&&currentUser.canEdit;
+  const rows=[...data].reverse().map(r=>{const ci=records.indexOf(r);
+    const cp=r.orders>0?r.cancel/r.orders*100:0,aov=r.orders>0?r.sales*1e6/r.orders:0;
+    return `<tr><td>${fmtDateTH(r.date)}</td><td class="mono">${fmt(r.sales)}</td><td class="mono">${r.orders.toLocaleString()}</td>
+      <td class="mono">฿${fmt(aov,0)}</td><td class="mono">฿${fmt(r.basket,0)}</td><td class="mono">${fmt(r.otif,1)}%</td>
+      <td><span class="badge" style="background:${cp>3?'rgba(226,35,26,.2)':'rgba(34,197,94,.18)'};color:${cp>3?'#ff4d44':'#22c55e'}">${fmt(cp,1)}%</span></td>
+      <td>${canEdit?`<button class="del" onclick="delRec(${ci})">🗑</button>`:'—'}</td></tr>`}).join('');
+  document.getElementById('recTable').innerHTML=`<thead><tr><th>วันที่</th><th>Sales(MB)</th><th>Orders</th><th>AVG/Order</th><th>Basket</th><th>OTIF</th><th>Cancel</th><th></th></tr></thead><tbody>${rows}</tbody>`;
+}
+function delRec(i){
+  if(!currentUser.canEdit)return;
+  const rec=records[i];if(!rec)return;
+  if(window.FB && window.FB.ready && !window.FB_ERROR){
+    window.FB.remove(rec.date).then(()=>toast('🗑 ลบข้อมูลแล้ว'))
+      .catch(e=>{console.error(e);records.splice(i,1);render();toast('🗑 ลบ (เฉพาะในเครื่อง)');});
+  }else{
+    records.splice(i,1);render();toast('🗑 ลบข้อมูลแล้ว');
+  }
+}
+
+/* ============ EXPORT EXCEL ============ */
+function exportExcel(){
+  const data=getData();
+  if(!data.length){toast('⚠️ ไม่มีข้อมูลสำหรับ Export');return}
+  const rows=data.map(r=>{const cp=r.orders>0?r.cancel/r.orders*100:0,aov=r.orders>0?r.sales*1e6/r.orders:0,ch=r.pro+r.b2b||1;
+    return {'วันที่':r.date,'สาขา':r.store,'Total Sales (MB)':r.sales,'Orders':r.orders,
+      'AVG/Order (Baht)':Math.round(aov),'Basket Size (Baht)':r.basket,
+      'Makro Pro (MB)':r.pro,'Makro Pro %':+(r.pro/ch*100).toFixed(2),'B2B (MB)':r.b2b,'B2B %':+(r.b2b/ch*100).toFixed(2),
+      'On-Time %':r.ontime,'In-Full %':r.infull,'OTIF %':r.otif,'Cancelled':r.cancel,'Cancel %':+cp.toFixed(2)}});
+  const ws=XLSX.utils.json_to_sheet(rows);
+  ws['!cols']=Object.keys(rows[0]).map(k=>({wch:Math.max(k.length+2,12)}));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'O2O Phichit');
+  const fn=`O2O_Phichit_${todayStr()}.xlsx`;
+  XLSX.writeFile(wb,fn);
+  toast('📥 Export สำเร็จ: '+fn);
+}
+
+/* ============ SEED (ใช้ครั้งแรกเมื่อฐานข้อมูลว่าง) ============ */
+function buildSeedRecords(){
+  // [sales, orders, pro, b2b, ontime, infull, otif, cancel] — basket auto-calculated
+  const base=[
+    [1.10,231,0.36,0.74,98.1,94.4,92.6,9],
+    [0.98,205,0.31,0.67,97.2,93.8,91.4,11],
+    [1.21,248,0.41,0.80,98.4,95.1,93.7,8],
+    [0.89,190,0.28,0.61,96.9,92.5,90.2,13],
+    [1.05,222,0.35,0.70,97.6,94.0,92.0,12],
+    [1.15,238,0.38,0.77,98.2,94.8,93.1,10],
+    [1.03,219,0.34,0.69,97.84,94.16,92.26,14]];
+  const out=[],today=new Date();
+  base.forEach((b,k)=>{const d=new Date(today);d.setDate(today.getDate()-(base.length-1-k));
+    const basket=b[1]>0?Math.round(b[0]*1e6/b[1]):0;
+    out.push({date:d.toISOString().slice(0,10),store:'Phichit',sales:b[0],orders:b[1],basket,
+      walkin:0,pro:b[2],b2b:b[3],fresh:0,dry:0,nonfood:0,ontime:b[4],infull:b[5],otif:b[6],cancel:b[7]})});
+  return out;
+}
+
+/* ============ FIREBASE WIRING ============ */
+function startFirebase(){
+  if(!(window.FB && window.FB.ready)){startOffline();return;}
+  // โหลดครั้งแรก: ถ้าฐานข้อมูลว่าง ให้ใส่ข้อมูลตัวอย่างขึ้นไป (เฉพาะครั้งแรก)
+  window.FB.once().then(val=>{
+    if(!val || Object.keys(val).length===0){
+      buildSeedRecords().forEach(r=>window.FB.save(r));
+    }
+  }).catch(e=>{console.error('Firebase init error:',e);});
+  // subscribe realtime: ทุกครั้งที่ข้อมูลเปลี่ยน จะอัปเดตหน้าจอเอง
+  window.FB.subscribe(list=>{
+    records=(list||[]).slice().sort((a,b)=>a.date.localeCompare(b.date));
+    render();
+    if(document.getElementById('view-month').classList.contains('active'))renderMonth();
+  });
+}
+function startOffline(){
+  // โหมดออฟไลน์ (เปิดไฟล์ตรง ๆ หรือเชื่อม Firebase ไม่ได้) ใช้ข้อมูลตัวอย่างในเครื่อง
+  records=buildSeedRecords();
+  render();
+}
+
+/* init */
+quickRange('mtd',document.querySelector('.chip.active'));
+buildSettings();
+if(window.FB && window.FB.ready){startFirebase();}
+else{window.addEventListener('fb-ready',startFirebase,{once:true});
+  // กันกรณีโหลด Firebase ไม่ได้ภายใน 4 วินาที -> ใช้โหมดออฟไลน์
+  setTimeout(()=>{if(!records.length)startOffline();},4000);}
+
+
+/* ============ MONTHLY SUMMARY ============ */
+function monthName(ym){const[y,m]=ym.split('-');return['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1]+'. '+y}
+function getMonthData(){
+  let ym=document.getElementById('monthPick').value;
+  if(!ym){ym=todayStr().slice(0,7);document.getElementById('monthPick').value=ym}
+  return {ym,data:records.filter(r=>r.store==='Phichit'&&r.date.slice(0,7)===ym)};
+}
+function renderMonth(){
+  const {ym,data}=getMonthData();
+  if(!data.length){
+    document.getElementById('monthHead').innerHTML=`<div class="panel" style="text-align:center;color:var(--mut);padding:30px">📭 ไม่มีข้อมูลสำหรับเดือน ${monthName(ym)}</div>`;
+    ['monthKpi','monthChan','monthProd','monthRings'].forEach(i=>document.getElementById(i).innerHTML='');
+    return;
+  }
+  const n=data.length;
+  const sum=f=>data.reduce((s,r)=>s+(r[f]||0),0);
+  const avg=f=>sum(f)/n;
+  const total=sum('sales');
+  // หาร = วันที่ล่าสุดที่บันทึกในเดือน - 1
+  const lastDayM=parseInt(data[data.length-1].date.split('-')[2],10);
+  const mDays=Math.max(lastDayM-1,1);
+  const avgDay=total/mDays;
+  const walkin=sum('walkin'),pro=sum('pro'),b2b=sum('b2b');
+  const fresh=sum('fresh'),dry=sum('dry'),nonfood=sum('nonfood');
+  const chTot=walkin+pro+b2b||1;
+  const lastDate=fmtDateTH(data[data.length-1].date);
+  document.getElementById('monthHead').innerHTML=`<div class="panel" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+    <div><h3 style="font-size:18px">Store Phichit Performance · ${monthName(ym)}</h3>
+    <p class="psub" style="margin:0">Update ${lastDate} · MTD · ${n} วัน</p></div>
+    <div style="font-family:'Sora';font-weight:800;font-size:30px;color:var(--accent-soft)">${fmt(total)} <span style="font-size:16px;color:var(--mut)">MB</span></div></div>`;
+  const kpis=[
+    {l:'Total',v:fmt(total)+' <span style="font-size:14px;color:var(--mut)">MB</span>',s:'ยอดรวมทั้งเดือน',ic:'💰',c:'var(--accent)'},
+    {l:'AVG / Day',v:fmt(avgDay)+' <span style="font-size:14px;color:var(--mut)">MB</span>',s:'หาร '+mDays+' วัน',ic:'📈',c:'var(--teal)'},
+    {l:'OTIF',v:fmt(avg('otif'),2)+'%',s:'เฉลี่ยทั้งเดือน',ic:'🎯',c:'var(--violet)'},
+    {l:'On-Time',v:fmt(avg('ontime'),2)+'%',s:'ส่งตรงเวลา',ic:'⏱️',c:'var(--blue)'},
+    {l:'In-Full',v:fmt(avg('infull'),2)+'%',s:'ส่งครบ',ic:'📦',c:'var(--amber)'},
+  ];
+  document.getElementById('monthKpi').innerHTML=kpis.map(k=>`<div class="kpi"><div class="glow" style="background:${k.c}"></div>
+    <div class="lab"><span class="ic">${k.ic}</span>${k.l}</div><div class="val">${k.v}</div><div class="sub">${k.s}</div></div>`).join('');
+  const chans=[{n:'Walk-in',v:walkin,p:walkin/chTot*100,c:'linear-gradient(90deg,#e2231a,#ff5a2c)'},
+    {n:'Makro Pro',v:pro,p:pro/chTot*100,c:'linear-gradient(90deg,#3b82f6,#8b5cf6)'},
+    {n:'B2B',v:b2b,p:b2b/chTot*100,c:'linear-gradient(90deg,#1fd4b4,#22c55e)'}].filter(c=>c.v>0||c.n!=='Walk-in');
+  document.getElementById('monthChan').innerHTML=chans.map(c=>`<div class="chan"><div class="row"><span>${c.n}</span><b>${fmt(c.v)} MB · ${fmt(c.p,2)}%</b></div>
+    <div class="bar"><i style="width:${c.p}%;background:${c.c}"></i></div></div>`).join('');
+  const prodTot=fresh+dry+nonfood;
+  const prodPanel=document.getElementById('monthProd').closest('.panel');
+  if(prodTot<=0){if(prodPanel)prodPanel.style.display='none';document.getElementById('monthProd').innerHTML='';}
+  else{
+    if(prodPanel)prodPanel.style.display='';
+    const prods=[{n:'Fresh Food',v:fresh,p:fresh/prodTot*100,c:'linear-gradient(90deg,#22c55e,#1fd4b4)'},
+      {n:'Dry Food',v:dry,p:dry/prodTot*100,c:'linear-gradient(90deg,#f59e0b,#fbbf24)'},
+      {n:'Non Food',v:nonfood,p:nonfood/prodTot*100,c:'linear-gradient(90deg,#8b5cf6,#c084fc)'}];
+    document.getElementById('monthProd').innerHTML=prods.map(c=>`<div class="chan"><div class="row"><span>${c.n}</span><b>${fmt(c.v)} MB · ${fmt(c.p,1)}%</b></div>
+      <div class="bar"><i style="width:${c.p}%;background:${c.c}"></i></div></div>`).join('');
+  }
+  const ringData=[{l:'On-Time',v:avg('ontime'),c:'#1fd4b4'},{l:'In-Full',v:avg('infull'),c:'#3b82f6'},{l:'OTIF',v:avg('otif'),c:'var(--accent)'}];
+  document.getElementById('monthRings').innerHTML=ringData.map(r=>{const R=42,C=2*Math.PI*R,off=C*(1-r.v/100);
+    return `<div class="ring"><svg width="110" height="110" viewBox="0 0 110 110" style="transform:rotate(-90deg)">
+      <circle cx="55" cy="55" r="${R}" fill="none" stroke="rgba(127,140,176,.18)" stroke-width="10"/>
+      <circle cx="55" cy="55" r="${R}" fill="none" stroke="${r.c}" stroke-width="10" stroke-linecap="round"
+        stroke-dasharray="${C}" stroke-dashoffset="${C}" style="transition:stroke-dashoffset 1.1s cubic-bezier(.2,.8,.2,1)" data-off="${off}"/>
+      <text x="55" y="60" text-anchor="middle" transform="rotate(90 55 55)" fill="var(--txt)" font-size="17" font-weight="800" font-family="Sora">${fmt(r.v,1)}%</text>
+      </svg><span class="rl">${r.l}</span></div>`}).join('');
+  setTimeout(()=>document.querySelectorAll('#monthRings circle[data-off]').forEach(c=>c.setAttribute('stroke-dashoffset',c.dataset.off)),60);
+}
+function exportMonthExcel(){
+  const {ym,data}=getMonthData();
+  if(!data.length){toast('⚠️ ไม่มีข้อมูลเดือนนี้');return}
+  const n=data.length,sum=f=>data.reduce((s,r)=>s+(r[f]||0),0),avg=f=>sum(f)/n;
+  const total=sum('sales'),walkin=sum('walkin'),pro=sum('pro'),b2b=sum('b2b'),chTot=walkin+pro+b2b||1;
+  const fresh=sum('fresh'),dry=sum('dry'),nonfood=sum('nonfood');
+  const rows=[
+    {'หัวข้อ':'Total','ค่า':+total.toFixed(2),'หน่วย':'MB','%':''},
+    {'หัวข้อ':'AVG./DAY','ค่า':+(total/n).toFixed(2),'หน่วย':'MB','%':''},
+  ];
+  if(walkin>0)rows.push({'หัวข้อ':'Walk-in','ค่า':+walkin.toFixed(2),'หน่วย':'MB','%':+(walkin/chTot*100).toFixed(2)});
+  rows.push({'หัวข้อ':'Makro Pro','ค่า':+pro.toFixed(2),'หน่วย':'MB','%':+(pro/chTot*100).toFixed(2)});
+  rows.push({'หัวข้อ':'B2B','ค่า':+b2b.toFixed(2),'หน่วย':'MB','%':+(b2b/chTot*100).toFixed(2)});
+  if(fresh+dry+nonfood>0){
+    rows.push({'หัวข้อ':'Fresh Food','ค่า':+fresh.toFixed(2),'หน่วย':'MB','%':''});
+    rows.push({'หัวข้อ':'Dry Food','ค่า':+dry.toFixed(2),'หน่วย':'MB','%':''});
+    rows.push({'หัวข้อ':'Non Food','ค่า':+nonfood.toFixed(2),'หน่วย':'MB','%':''});
+  }
+  rows.push({'หัวข้อ':'OTIF','ค่า':+avg('otif').toFixed(2),'หน่วย':'%','%':''});
+  rows.push({'หัวข้อ':'Ontime','ค่า':+avg('ontime').toFixed(2),'หน่วย':'%','%':''});
+  rows.push({'หัวข้อ':'Infull','ค่า':+avg('infull').toFixed(2),'หน่วย':'%','%':''});
+  const ws=XLSX.utils.json_to_sheet(rows);ws['!cols']=[{wch:16},{wch:12},{wch:8},{wch:10}];
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Summary '+monthName(ym));
+  XLSX.writeFile(wb,`Phichit_Summary_${ym}.xlsx`);
+  toast('📥 Export สรุปเดือน '+monthName(ym));
+}
+</script>
+</body>
+</html>
