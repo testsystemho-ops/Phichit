@@ -617,22 +617,19 @@ function render(){
     return;
   }
   const n=data.length;
-  // จำนวนวันที่ใช้หาร = วันที่ล่าสุดที่บันทึก - 1 (วันที่ย้อนหลังของเดือนนั้น)
-  // เช่น บันทึกล่าสุดวันที่ 7 → หาร 6 วัน, วันที่ 15 → หาร 14 วัน
-  const lastDay=parseInt(data[data.length-1].date.split('-')[2],10);
-  const elapsedDays=Math.max(lastDay-1,1);
+  // จำนวนวันที่ใช้หาร = จำนวนวันที่มีข้อมูลจริง (record ที่ถูกบันทึกในช่วงที่เลือก)
   const totSales=data.reduce((s,r)=>s+r.sales,0),totOrders=data.reduce((s,r)=>s+r.orders,0);
   const totPro=data.reduce((s,r)=>s+r.pro,0),totB2B=data.reduce((s,r)=>s+r.b2b,0);
   const totCancel=data.reduce((s,r)=>s+r.cancel,0);
-  const avgDay=totSales/elapsedDays, avgOrderPerDay=totOrders/elapsedDays;
+  const avgDay=totSales/n, avgOrderPerDay=totOrders/n;
   const avgBasket=data.reduce((s,r)=>s+r.basket,0)/n;
   const avgOntime=data.reduce((s,r)=>s+r.ontime,0)/n,avgInfull=data.reduce((s,r)=>s+r.infull,0)/n,avgOtif=data.reduce((s,r)=>s+r.otif,0)/n;
   const cancelPct=totOrders>0?totCancel/totOrders*100:0;
   const kpis=[
     {l:'Total Sales',v:fmt(totSales)+' <span style="font-size:15px;color:var(--mut)">MB</span>',s:n+' วันที่บันทึก',ic:'💰',c:'var(--accent)'},
-    {l:'AVG / Day',v:fmt(avgDay)+' <span style="font-size:15px;color:var(--mut)">MB</span>',s:'หาร '+elapsedDays+' วัน',ic:'📈',c:'var(--teal)'},
+    {l:'AVG / Day',v:fmt(avgDay)+' <span style="font-size:15px;color:var(--mut)">MB</span>',s:'หาร '+n+' วัน',ic:'📈',c:'var(--teal)'},
     {l:'Total Orders',v:totOrders.toLocaleString(),s:'~'+Math.round(totOrders/n)+' order/วัน',ic:'🛒',c:'var(--blue)'},
-    {l:'AVG / Order',v:fmt(avgOrderPerDay,0)+' <span style="font-size:15px;color:var(--mut)">order</span>',s:'หาร '+elapsedDays+' วัน',ic:'🎯',c:'var(--violet)'},
+    {l:'AVG / Order',v:fmt(avgOrderPerDay,0)+' <span style="font-size:15px;color:var(--mut)">order</span>',s:'หาร '+n+' วัน',ic:'🎯',c:'var(--violet)'},
     {l:'Basket Size',v:'฿'+fmt(avgBasket,0),s:'ขนาดตะกร้าเฉลี่ย',ic:'🧺',c:'var(--amber)'},
     {l:'Cancelled',v:totCancel+' <span style="font-size:15px;color:var(--mut)">order</span>',s:fmt(cancelPct)+'% ของทั้งหมด',ic:'⛔',c:'var(--accent-soft)'},
   ];
@@ -790,10 +787,8 @@ function renderMonth(){
   const sum=f=>data.reduce((s,r)=>s+(r[f]||0),0);
   const avg=f=>sum(f)/n;
   const total=sum('sales');
-  // หาร = วันที่ล่าสุดที่บันทึกในเดือน - 1
-  const lastDayM=parseInt(data[data.length-1].date.split('-')[2],10);
-  const mDays=Math.max(lastDayM-1,1);
-  const avgDay=total/mDays;
+  // หาร = จำนวนวันที่มีข้อมูลจริงในเดือนนั้น
+  const avgDay=total/n;
   const walkin=sum('walkin'),pro=sum('pro'),b2b=sum('b2b');
   const fresh=sum('fresh'),dry=sum('dry'),nonfood=sum('nonfood');
   const chTot=walkin+pro+b2b||1;
@@ -804,7 +799,7 @@ function renderMonth(){
     <div style="font-family:'Sora';font-weight:800;font-size:30px;color:var(--accent-soft)">${fmt(total)} <span style="font-size:16px;color:var(--mut)">MB</span></div></div>`;
   const kpis=[
     {l:'Total',v:fmt(total)+' <span style="font-size:14px;color:var(--mut)">MB</span>',s:'ยอดรวมทั้งเดือน',ic:'💰',c:'var(--accent)'},
-    {l:'AVG / Day',v:fmt(avgDay)+' <span style="font-size:14px;color:var(--mut)">MB</span>',s:'หาร '+mDays+' วัน',ic:'📈',c:'var(--teal)'},
+    {l:'AVG / Day',v:fmt(avgDay)+' <span style="font-size:14px;color:var(--mut)">MB</span>',s:'หาร '+n+' วัน',ic:'📈',c:'var(--teal)'},
     {l:'OTIF',v:fmt(avg('otif'),2)+'%',s:'เฉลี่ยทั้งเดือน',ic:'🎯',c:'var(--violet)'},
     {l:'On-Time',v:fmt(avg('ontime'),2)+'%',s:'ส่งตรงเวลา',ic:'⏱️',c:'var(--blue)'},
     {l:'In-Full',v:fmt(avg('infull'),2)+'%',s:'ส่งครบ',ic:'📦',c:'var(--amber)'},
